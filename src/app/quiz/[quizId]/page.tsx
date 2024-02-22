@@ -1,27 +1,63 @@
 "use client";
 
-import { useState } from "react";
-import { quizData, questionData } from "@/lib/data";
-import { Question } from "@/types";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { quizData, questionData, QuizResultData, userData } from "@/lib/data";
+import { Answer, Question, QuizResult } from "@/types";
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useForm } from 'react-hook-form';
-import { object } from "zod";
 
 
 export default function AttemptQuizPage({ params, }: Readonly<{ params: { quizId: string }; }>) {
+    const [user, setUser] = useState(userData[0]);
     const [quizzes, setQuizzes] = useState(quizData);
     const [quiz, setQuiz] = useState(quizzes.find((quiz) => quiz.id === parseInt(params.quizId)));
     const [questions, setQuestions] = useState(questionData.filter((question) => question.quiz_id === parseInt(params.quizId)));
-
+    const [quizResults, setQuizResults] = useState(QuizResultData);
     const { register, handleSubmit, formState: { errors } } = useForm();
+
+    const router = useRouter();
 
     if (Object.keys(errors).length) {
         console.log(errors);
     }
     const onSubmit = (data: any) => {
-        console.log("data: ", data)
-        console.log("Question: ", questions)
+        if (quiz) {
+            const entries: [string, string][] = Object.entries(data);
+            const correct_questions: Question[] = [];
+            const wrong_questions: Question[] = [];
+            const chosen_answers: Answer[] = [];
+
+            for (const [key, value] of entries) {
+                const question = questions.find((question) => question.id === parseInt(key));
+
+                if (typeof question?.correct_answer == "object") {
+                    if (question?.correct_answer?.id === parseInt(value)) {
+                        correct_questions.push(question);
+                    } else {
+                        wrong_questions.push(question);
+                    }
+                    question.answers?.find((answer) => {
+                        if (typeof answer == "object" && answer.id === parseInt(value)) {
+                            chosen_answers.push(answer as Answer)
+                        }
+                    });
+                }
+            }
+            const result: QuizResult = {
+                id: Math.floor(Math.random() * 100000) + 1,
+                grade: correct_questions.length / questions.length * 100,
+                correct_questions: correct_questions,
+                wrong_questions: wrong_questions,
+                chosen_answers: chosen_answers,
+                quiz_id: quiz,
+                user_id: user,
+            }
+
+            setQuizResults([...quizResults, result]);
+            router.push(`/quiz/${quiz.id}/result`);
+        }
     };
 
     return (

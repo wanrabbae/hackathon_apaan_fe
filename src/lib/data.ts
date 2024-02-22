@@ -1,4 +1,14 @@
-import { Question, Quiz } from "@/types";
+import { Question, Quiz, QuizResult, User } from "@/types";
+
+export const userData: User[] = [
+  {
+    id: 456,
+    fullname: "ini akun user",
+    email: "email@email.com",
+    password: "pw",
+    role: 2,
+  }
+]
 
 export const questionData: Question[] = [
   {
@@ -77,3 +87,6 @@ export const quizData: Quiz[] = [
     questions: questionData,
   },
 ];
+
+export const QuizResultData: QuizResult[] = [
+]
