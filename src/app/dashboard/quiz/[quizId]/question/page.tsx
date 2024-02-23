@@ -90,7 +90,7 @@ export default function DashboardQuestionPage({
   );
 
   const handleCreate = (newQuestionRaw: z.infer<typeof QuestionFormSchema>) => {
-    const questionId = questions.length + 1;
+    const questionId = questions ? questions[questions.length - 1].id + 1 : 1;
 
     const newAnswers: Answer[] = newQuestionRaw.answers.map(
       (answer, index) => ({
@@ -100,23 +100,68 @@ export default function DashboardQuestionPage({
       })
     );
 
-    const correctAnswer = newQuestionRaw.answers.find(
-      (answer) => answer.label === newQuestionRaw.correctAnswer
-    );
+    let correctAnswer: Answer | undefined;
+
+    for (let i = 0; i < newAnswers.length; i++) {
+      if (newQuestionRaw.answers[i].label === newQuestionRaw.correctAnswer) {
+        correctAnswer = newAnswers[i];
+        break;
+      }
+    }
+
+    if (!correctAnswer) {
+      throw new Error("Correct answer not found");
+    }
 
     const newQuestion: Question = {
       id: questionId,
       quiz_id: parseInt(params.quizId),
       text: newQuestionRaw.text,
       answers: newAnswers,
-      correctAnswer: correctAnswer,
+      correct_answer: correctAnswer,
     };
 
     setQuestions((prev) => [...prev, newQuestion]);
   };
 
-  const handleDelete = () => {
-    console.log("delete");
+  const handleEdit = (
+    editedQuestionRaw: z.infer<typeof QuestionFormSchema>,
+    correctAnswerRaw: string,
+    prevQuestion: Question
+  ) => {
+    const newAnswers: Answer[] = editedQuestionRaw.answers.map(
+      (answer, index) => ({
+        id: index,
+        text: answer.text,
+        question_id: prevQuestion.id,
+      })
+    );
+
+    const correctAnswer = newAnswers.find(
+      (answer) => answer.text === correctAnswerRaw
+    );
+
+    if (!correctAnswer) {
+      throw new Error("Correct answer not found");
+    }
+
+    const editedQuestion: Question = {
+      id: prevQuestion.id,
+      quiz_id: prevQuestion.quiz_id,
+      text: editedQuestionRaw.text,
+      answers: newAnswers,
+      correct_answer: correctAnswer,
+    };
+
+    setQuestions((prev) =>
+      prev.map((question) =>
+        question.id === prevQuestion.id ? editedQuestion : question
+      )
+    );
+  };
+
+  const handleDelete = (question: Question) => {
+    setQuestions((prev) => prev.filter((q) => q.id !== question.id));
   };
 
   return (
@@ -146,11 +191,10 @@ export default function DashboardQuestionPage({
               <TableCell>{question.text}</TableCell>
               <TableCell>
                 <div className="flex gap-3 justify-end">
-                  <TooltipCustom content="Edit question">
-                    <Button size="icon" variant="default">
-                      <Pencil size={18} strokeWidth={2.25} />
-                    </Button>
-                  </TooltipCustom>
+                  <QuestionEditDialog
+                    handleEdit={handleEdit}
+                    question={question}
+                  />
                   <QuestionDeleteAlertDialog
                     handleDelete={handleDelete}
                     question={question}
@@ -199,10 +243,6 @@ function QuestionCreateDialog({
     });
     setOpen(false);
   };
-
-  useEffect(() => {
-    console.log(form.getValues());
-  }, [form.getValues()]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -350,6 +390,208 @@ function QuestionCreateDialog({
 
           <Button form="create-question-form" type="submit">
             Create quiz
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function QuestionEditDialog({
+  handleEdit,
+  question,
+}: Readonly<{
+  handleEdit: (
+    data: z.infer<typeof QuestionFormSchema>,
+    correctAnswer: string,
+    prevQuestion: Question
+  ) => void;
+  question: Question;
+}>) {
+  const answers = question.answers;
+  const correctAnswer = question.correct_answer;
+  const form = useForm<z.infer<typeof QuestionFormSchema>>({
+    resolver: zodResolver(QuestionFormSchema),
+    defaultValues: {
+      text: question.text,
+      answers: [
+        { label: "A", text: answers[0].text },
+        { label: "B", text: answers[1].text },
+        { label: "C", text: answers[2].text },
+        { label: "D", text: answers[3].text },
+      ],
+      correctAnswer: "A",
+    },
+  });
+  const [open, setOpen] = useState(false);
+
+  const onSubmit = (data: z.infer<typeof QuestionFormSchema>) => {
+    const correctAnswer = data.answers.find(
+      (answer) => answer.label === data.correctAnswer
+    )?.text;
+
+    if (!correctAnswer) {
+      throw new Error("Correct answer not found");
+    }
+
+    handleEdit(data, correctAnswer, question);
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <TooltipCustom content="Edit question">
+        <DialogTrigger asChild>
+          <Button size="icon" variant="default">
+            <Pencil size={18} strokeWidth={2.25} />
+          </Button>
+        </DialogTrigger>
+      </TooltipCustom>
+      <DialogContent className="overflow-y-auto max-h-screen min-w-[75vw] lg:min-w-[50vw]">
+        <DialogHeader>
+          <DialogTitle>Edit Question</DialogTitle>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form id="edit-question-form" onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="grid gap-8 py-4">
+              <div className="grid gap-4">
+                <FormField
+                  control={form.control}
+                  name="text"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Question</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid gap-4">
+                <FormField
+                  control={form.control}
+                  name="answers.0.text"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Badge className="rounded-full" variant="secondary">
+                          Option A
+                        </Badge>
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="answers.1.text"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Badge className="rounded-full" variant="secondary">
+                          Option B
+                        </Badge>
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="answers.2.text"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Badge className="rounded-full" variant="secondary">
+                          Option C
+                        </Badge>
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="answers.3.text"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Badge className="rounded-full" variant="secondary">
+                          Option D
+                        </Badge>
+                      </FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="correctAnswer"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel htmlFor="select-correct-answer">
+                      <Badge className="rounded-full">Correct Answer</Badge>
+                    </FormLabel>
+                    <FormControl>
+                      <Select
+                        required
+                        onValueChange={field.onChange}
+                        defaultValue={
+                          form
+                            .watch("answers")
+                            .find(
+                              (answer) => answer.text === correctAnswer.text
+                            )
+                            ?.label.toString() || "A"
+                        }
+                      >
+                        <SelectTrigger id="select-correct-answer">
+                          <SelectValue placeholder="Select correct answer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {form.watch("answers").map((answer) => (
+                            <SelectItem key={answer.label} value={answer.label}>
+                              {`${answer.label}. ${answer.text}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </form>
+        </Form>
+
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="secondary">
+              Close
+            </Button>
+          </DialogClose>
+
+          <Button form="edit-question-form" type="submit">
+            Save changes
           </Button>
         </DialogFooter>
       </DialogContent>

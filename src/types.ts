@@ -27,8 +27,8 @@ export interface Answer {
  * Question
  */
 export interface Question {
-  answers?: number[] | Answer[];
-  correct_answer?: number | Answer;
+  answers: Answer[];
+  correct_answer: Answer;
   id: number;
   quiz_id: number | Quiz;
   text: string;
