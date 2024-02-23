@@ -38,9 +38,6 @@ export interface Question {
 export interface User {
   email: string;
   fullname: string;
-  /**
-   * ID
-   */
   id: number;
   password: string;
   role: number;
@@ -48,12 +45,12 @@ export interface User {
 }
 
 export interface QuizResult {
-  chosen_answers?: Answer[];
-  correct_questions?: Question[];
-  grade: number;
   id: number;
+  grade: number;
+  correct_questions?: Question[];
+  wrong_questions?: Question[];
+  chosen_answers?: Answer[];
   quiz_id: Quiz;
   user_id: User;
-  wrong_questions?: Question[];
   [property: string]: any;
 }
