@@ -77,16 +77,28 @@ export const questionData: Question[] = [
   },
 ];
 
-export const quizData: Quiz[] = [
-  {
-    id: 1,
-    name: "Pendidikan Pancasila dan Kewarganegaraan",
-    description:
-      "Pendidikan Pancasila dan Kewarganegaraan (PPKn) adalah salah satu mata pelajaran yang wajib di Indonesia. PPKn bertujuan untuk membentuk warga negara yang memiliki pengetahuan, sikap, dan keterampilan yang baik dalam kehidupan bermasyarakat, berbangsa, dan bernegara.",
-    status: "Active",
-    questions: questionData,
-  },
-];
+// export const quizData: Quiz[] = [
+//   {
+//     id: 1,
+//     name: "Pendidikan Pancasila dan Kewarganegaraan",
+//     description:
+//       "Pendidikan Pancasila dan Kewarganegaraan (PPKn) adalah salah satu mata pelajaran yang wajib di Indonesia. PPKn bertujuan untuk membentuk warga negara yang memiliki pengetahuan, sikap, dan keterampilan yang baik dalam kehidupan bermasyarakat, berbangsa, dan bernegara.",
+//     status: "Active",
+//     questions: questionData,
+//   },
+// ];
+
+export async function quizData(): Promise<Quiz[]> {
+  try {
+    const response = await fetch('https://apaan-be.000webhostapp.com/api/quiz');
+    console.log(response);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch quiz data', error);
+    return [];
+  }
+}
 
 export const QuizResultData: QuizResult[] = [
 ]

@@ -21,11 +21,13 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import { Quiz } from "@/types";
 
 export default function AttemptQuizPage({
     params,
 }: Readonly<{ params: { quizId: string } }>) {
     const [currentAnswer, setCurrentAnswer] = useState("");
+    const idQuiz = parseInt(params.quizId);
 
     useEffect(() => {
         console.log(currentAnswer);
