@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Inter as FontSans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ModeToggle } from "@/components/ModeToggle";
+import { Nav } from "@/components/Nav";
 import { cn } from "@/lib/utils";
 import "./globals.css";
 
@@ -35,17 +34,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <nav className="fixed top-0 w-screen h-12 z-50">
-            <div className="flex items-center justify-between px-24 py-2 backdrop-blur-xl">
-              <Link
-                className="scroll-m-20 text-xl font-semibold tracking-tight dark:text-zinc-50"
-                href="/"
-              >
-                APAAN
-              </Link>
-              <ModeToggle />
-            </div>
-          </nav>
+          <Nav />
           {children}
         </ThemeProvider>
       </body>
