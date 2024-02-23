@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { quizData, questionData } from "@/lib/data";
+import { quizData, questionData, QuizResultData } from "@/lib/data";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 export default function ResultQuizPage({ params, }: Readonly<{ params: { quizId: string }; }>) {
     const [quizzes, setQuizzes] = useState(quizData);
     const [quiz, setQuiz] = useState(quizzes.find((quiz) => quiz.id === parseInt(params.quizId)));
+    const [quizResult, setQuizResult] = useState(QuizResultData.find((quizResult) => quizResult.quizId === parseInt(params.quizId)));
 
     return (
         <main className="mt-12 flex min-h-screen flex-col px-24 py-6 gap-8 dark:bg-zinc-950 bg-zinc-50">
@@ -19,8 +20,8 @@ export default function ResultQuizPage({ params, }: Readonly<{ params: { quizId:
                 </h2>
             </div>
             <div className="flex flex-col gap-2 text-zinc-950 dark:text-zinc-50">
-                <h3 className="text-2xl font-semibold">Nama Kuisnya</h3>
-                <p className="text-lg">You have a score of 100%</p>
+                <h3 className="text-2xl font-semibold">{quiz?.name}</h3>
+                <p className="text-lg">You have a score of {quizResult?.grade}%</p>
                 <p className="text-lg">3 out of 5 answers are correct</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

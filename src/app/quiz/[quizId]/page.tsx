@@ -26,19 +26,115 @@ import { Quiz } from "@/types";
 export default function AttemptQuizPage({
     params,
 }: Readonly<{ params: { quizId: string } }>) {
-    const [currentAnswer, setCurrentAnswer] = useState("");
+    const [answers, setAnswers] = useState<{ [key: string]: string }>({});
+    const [cQuestion, setCQuestion] = useState(useSearchParams().get("question"));
+    const [isFirstInitialize, setIsFirstInitialize] = useState(true);
+    const [routes, setRoutes] = useState(useRouter());
+
+    if (cQuestion === null || cQuestion === "") {
+        return routes.push(`/quiz/${params.quizId}?question=1`);
+    }
+
     const idQuiz = parseInt(params.quizId);
+    const [quiz, setQuiz] = useState<Quiz | undefined>(quizData.find((quiz) => quiz.id === idQuiz));
+
+    if (quiz === undefined) {
+        return (
+            <main className="container h-screen pt-16 dark:bg-zinc-950 bg-zinc-50 overflow-hidden min-h-screen w-full flex flex-col gap-6 justify-center items-center">
+                <h1 className="text-zinc-950 dark:text-zinc-50 font-bold text-xl">Data not found</h1>
+                <Link href={"/quiz/"}>
+                    <Button>Back</Button>
+                </Link>
+            </main>
+        );
+    }
+
+    const questions = quiz.questions as Question[];
+    const question = questions.find((question) => questions.indexOf(question) === parseInt(cQuestion) - 1);
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+    // useEffect(() => {
+    //     console.log(answers);
+    // }, [answers]);
+
+    const saveAnswerToSessionStorage = () => {
+        sessionStorage.setItem('quizAnswers', JSON.stringify(answers));
+    };
 
     useEffect(() => {
-        console.log(currentAnswer);
-    }, [currentAnswer]);
+        const storedAnswers = sessionStorage.getItem('quizAnswers');
+        if (storedAnswers) {
+            setAnswers(JSON.parse(storedAnswers));
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isFirstInitialize) {
+            saveAnswerToSessionStorage();
+        }
+        setIsFirstInitialize(false);
+    }, [answers]);
+
+    const storeLocalValue = (questionId: string, selectedOption: string) => {
+        setAnswers((prevAnswers) => ({
+            ...prevAnswers,
+            [questionId]: selectedOption,
+        }));
+    };
+
+    const nextQuestion = () => {
+        routes.push(`/quiz/${params.quizId}?question=${parseInt(cQuestion) + 1}`);
+        setCQuestion((prev) => {
+            const next = parseInt(prev ?? "") + 1;
+            return next.toString();
+        });
+    }
+
+    const prevQuestion = () => {
+        routes.push(`/quiz/${params.quizId}?question=${parseInt(cQuestion) - 1}`);
+        setCQuestion((prev) => {
+            const next = parseInt(prev ?? "") - 1;
+            return next.toString();
+        });
+    }
+
+    const onSubmit = () => {
+        const correctQuestions: Question[] = []
+        const wrongQuestions: Question[] = []
+        const chosenAnswers: Answer[] = []
+        Object.entries(answers).forEach(([key, value]) => {
+            let question = questions.find((question) => question.id.toString() === key);
+            if (question?.correct_answer.id.toString() === value) {
+                correctQuestions.push(question);
+            } else if (question) {
+                wrongQuestions.push(question);
+            }
+            const thisAnswer = question?.answers.find((answer) => answer.id.toString() === value);
+            chosenAnswers.push(thisAnswer as Answer);
+        });
+
+        const result: QuizResult = {
+            id: QuizResultData.length + 1,
+            grade: (correctQuestions.length / questions.length) * 100,
+            correct_questions: correctQuestions,
+            wrong_questions: wrongQuestions,
+            chosen_answers: chosenAnswers,
+            quiz_id: quiz,
+            user_id: userData[0],
+        };
+        // post to server
+        QuizResultData.push(result);
+
+        sessionStorage.removeItem('quizAnswers');
+        routes.push(`/quiz/${params.quizId}/result`);
+    }
 
     return (
         <>
             <nav className="container fixed top-0 w-screen h-12 z-50">
                 <div className="flex items-center justify-between py-2 backdrop-blur-xl">
                     <h4 className="scroll-m-20 text-xl font-semibold tracking-tight truncate max-w-64">
-                        Quiz 1
+                        {quiz.name}
                     </h4>
 
                     <QuestionsSheet />
@@ -65,72 +161,42 @@ export default function AttemptQuizPage({
                         <div className="space-y-4">
                             <p className="leading-7 [&:not(:first-child)]:mt-6 pr-4">
                                 <span className="inline-block w-7 aspect-square rounded-full bg-primary text-primary-foreground mr-2 text-center font-bold">
-                                    1
+                                    {question && questions.indexOf(question) + 1}
                                 </span>
-                                Lorem ipsum dolor, amet consectetur adipisicing elit. Eius vel
-                                reiciendis perspiciatis enim magnam pariatur ea corporis minus
-                                quod. Dignissimos recusandae qui iusto. Apa itu Pancasila?
-                                Lorem, ipsum dolor sit amet consectetur adipisicing elit.
-                                Possimus, amet illum numquam maiores quo minima animi ab soluta
-                                eum, sunt aspernatur aperiam ad provident molestias quia. Dicta
-                                sit ea ut quasi. Fuga quas facilis ad maxime saepe aliquam
-                                magnam, veritatis suscipit vitae, praesentium, tempora
-                                architecto nobis. Labore, commodi! Necessitatibus magni ea
-                                dolore earum dolores accusantium saepe pariatur itaque, quaerat
-                                provident inv. Lorem ipsum dolor, sit amet consectetur
-                                adipisicing elit. Sapiente blanditiis iusto eius aliquid,
-                                beatae, excepturi quo, praesentium odio illum quidem provident
-                                libero. Beatae saepe pariatur voluptatum ad, magnam consequuntur
-                                est magni eveniet aperiam libero amet nihil rerum perferendis
-                                sunt consequatur quidem nesciunt ipsa, vero unde quas! Officia
-                                autem illum maxime asperiores optio dignissimos iste aliquid
-                                error esse veritatis sint cupiditate ipsa nulla ea omnis
-                                temporibus recusandae accusantium praesentium, voluptatum,
-                                numquam architecto perferendis eveniet. Accusantium earum
-                                laboriosam atque perspiciatis modi quos doloremque recusandae
-                                sit ullam blanditiis expedita fugiat esse molestiae ex sunt
-                                impedit nisi, fuga ratione? Tenetur, aliquid sint quisquam hic
-                                illum officiis aperiam cupiditate quos atque voluptatibus
-                                consequuntur quaerat earum unde harum maiores aliquam, ipsam
-                                voluptates eaque soluta ipsum, labore assumenda nemo. Harum
-                                veniam aut deserunt minus debitis, perspiciatis obcaecati fuga
-                                perferendis, libero iste laborum.
+                                {question?.text}
                             </p>
 
                             <RadioGroup
-                                value={currentAnswer}
-                                onValueChange={(value) => setCurrentAnswer(value)}
+                                value={question && answers[question.id]}
+                                onValueChange={(value) => { question && storeLocalValue(question.id.toString(), value) }}
                             >
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="default" id="r1" />
-                                    <Label htmlFor="r1">A. Default</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="comfortable" id="r2" />
-                                    <Label htmlFor="r2">B. Comfortable</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="compact" id="r3" />
-                                    <Label htmlFor="r3">C. Compact</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="d" id="r4" />
-                                    <Label htmlFor="r4">D. Compact</Label>
-                                </div>
+                                {question?.answers.map((answer, i) =>
+                                    <div className="flex items-center space-x-2" key={answer.id}>
+                                        <RadioGroupItem value={answer.id.toString()} id={answer.id.toString()} />
+                                        <Label htmlFor={answer.id.toString()}>{alphabet[i]}. {answer.text}</Label>
+                                    </div>
+                                )}
                             </RadioGroup>
                         </div>
                     </ScrollArea>
                 </div>
 
                 <div className="flex justify-between items-center">
-                    <Button variant="outline" disabled>
+                    <Button variant="outline" onClick={prevQuestion} disabled={cQuestion === "1"}>
                         <ChevronLeft />
                         Previous
                     </Button>
-                    <Button variant="outline">
-                        Next
-                        <ChevronRight />
-                    </Button>
+                    {parseInt(cQuestion) === questions.length ?
+                        <Button variant="outline" onClick={onSubmit}>
+                            Submit
+                            <ChevronRight />
+                        </Button>
+                        :
+                        <Button variant="outline" onClick={nextQuestion}>
+                            Next
+                            <ChevronRight />
+                        </Button>
+                    }
                 </div>
             </main>
         </>

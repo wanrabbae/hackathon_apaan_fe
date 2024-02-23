@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import {
@@ -38,8 +38,14 @@ export default function AttemptQuizPage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const { QuizCode } = form.getValues();
+        sessionStorage.removeItem('quizAnswers');
+        if (quizData.find((quiz) => quiz.id === parseInt(QuizCode))) {
+            // router.push(`/quiz/${QuizCode}`);
+            window.location.href = `/quiz/${QuizCode}?question=1`;
+        } else {
+            alert('Quiz not found');
+        }
 
-        router.push(`/quiz/${QuizCode}`);
     };
 
     return (
