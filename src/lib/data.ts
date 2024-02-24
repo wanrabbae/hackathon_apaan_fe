@@ -88,5 +88,17 @@ export const quizData: Quiz[] = [
   },
 ];
 
+// export async function quizData(): Promise<Quiz[]> {
+//   try {
+//     const response = await fetch('https://apaan-be.000webhostapp.com/api/quiz');
+//     console.log(response);
+//     const data = await response.json();
+//     return data;
+//   } catch (error) {
+//     console.error('Failed to fetch quiz data', error);
+//     return [];
+//   }
+// }
+
 export const QuizResultData: QuizResult[] = [
 ]
