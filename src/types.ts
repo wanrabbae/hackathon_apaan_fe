@@ -3,13 +3,13 @@
  */
 export interface Quiz {
   description?: string;
-  id: number;
-  name: string;
+  id?: number;
+  name?: string;
   questions?: number | Question[];
   /**
    * Active / Inactive
    */
-  status: "Active" | "Inactive";
+  status?: "Active" | "Inactive";
   [property: string]: any;
 }
 
@@ -30,7 +30,7 @@ export interface Question {
   answers: Answer[];
   correct_answer: Answer;
   id: number;
-  quiz_id: number | Quiz;
+  quiz_id: string | Quiz;
   text: string;
   [property: string]: any;
 }

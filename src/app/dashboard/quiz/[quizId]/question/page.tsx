@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Trash, Pencil } from "lucide-react";
+import { Trash, Pencil, Plus } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -59,8 +59,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { quizData, questionData } from "@/lib/data";
-import { Question, Answer } from "@/types";
+// import { quizData, questionData } from "@/lib/data";
+import { Answer } from "@/types";
+import { createQuestion, deleteQuestion, getQuizById } from "@/api/quiz_api";
 
 const QuestionFormSchema = z.object({
   text: z.string().min(3),
@@ -79,96 +80,56 @@ export default function DashboardQuestionPage({
   params: { quizId: string };
 }>) {
   const router = useRouter();
-  const [quizzes, setQuizzes] = useState(quizData);
-  const [quiz, setQuiz] = useState(
-    quizzes.find((quiz) => quiz.id === parseInt(params.quizId))
-  );
-  const [questions, setQuestions] = useState(
-    questionData.filter(
-      (question) => question.quiz_id === parseInt(params.quizId)
-    )
-  );
+  const [quiz, setQuiz] = useState<any>();
+  const [questions, setQuestions] = useState<any>([]);
 
-  const handleCreate = (newQuestionRaw: z.infer<typeof QuestionFormSchema>) => {
-    const questionId = questions ? questions[questions.length - 1].id + 1 : 1;
+  const inAwait = async () => {
+    const quizData = await getQuizById(params.quizId);
+    setQuiz(quizData.data);
+    setQuestions(quizData.data.questions);
+  };
 
-    const newAnswers: Answer[] = newQuestionRaw.answers.map(
-      (answer, index) => ({
-        id: index,
-        text: answer.text,
-        question_id: questionId,
-      })
-    );
+  useEffect(() => {
+    inAwait();
+  }, []);
 
-    let correctAnswer: Answer | undefined;
-
-    for (let i = 0; i < newAnswers.length; i++) {
-      if (newQuestionRaw.answers[i].label === newQuestionRaw.correctAnswer) {
-        correctAnswer = newAnswers[i];
-        break;
-      }
+  const handleCreate = async (newQuestionRaw: any) => {
+   try {
+    newQuestionRaw.quiz_id = params.quizId;
+    const response = await createQuestion(newQuestionRaw);
+    const newQuestion = response.data.question;
+    setQuestions([...questions, newQuestion]);
+   } catch (error) {
+      console.log(error);
+      alert("Ups something went wrong")
     }
-
-    if (!correctAnswer) {
-      throw new Error("Correct answer not found");
-    }
-
-    const newQuestion: Question = {
-      id: questionId,
-      quiz_id: parseInt(params.quizId),
-      text: newQuestionRaw.text,
-      answers: newAnswers,
-      correct_answer: correctAnswer,
-    };
-
-    setQuestions((prev) => [...prev, newQuestion]);
   };
 
   const handleEdit = (
     editedQuestionRaw: z.infer<typeof QuestionFormSchema>,
     correctAnswerRaw: string,
-    prevQuestion: Question
+    prevQuestion: any
   ) => {
-    const newAnswers: Answer[] = editedQuestionRaw.answers.map(
-      (answer, index) => ({
-        id: index,
-        text: answer.text,
-        question_id: prevQuestion.id,
-      })
-    );
-
-    const correctAnswer = newAnswers.find(
-      (answer) => answer.text === correctAnswerRaw
-    );
-
-    if (!correctAnswer) {
-      throw new Error("Correct answer not found");
-    }
-
-    const editedQuestion: Question = {
-      id: prevQuestion.id,
-      quiz_id: prevQuestion.quiz_id,
-      text: editedQuestionRaw.text,
-      answers: newAnswers,
-      correct_answer: correctAnswer,
-    };
-
-    setQuestions((prev) =>
-      prev.map((question) =>
-        question.id === prevQuestion.id ? editedQuestion : question
-      )
-    );
+    console.log("edit");
+    
   };
 
-  const handleDelete = (question: Question) => {
-    setQuestions((prev) => prev.filter((q) => q.id !== question.id));
+  const handleDelete = async (question: any) => {
+    try {
+      const response = await deleteQuestion(question.id);
+      const newQuestions = questions.filter((q: any) => q.id !== response.data.question.id);
+      setQuestions(newQuestions);
+    } catch (error) {
+      console.log(error);
+      alert("Ups something went wrong")
+    }
   };
 
   return (
     <main className="mt-12 flex min-h-screen flex-col px-24 py-6 dark:bg-zinc-950 bg-zinc-50">
       <div className="flex justify-between border-b pb-2 mt-3">
         <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight first:mt-0">
-          {quiz?.name ?? "Quiz not found"}
+          { quiz ? quiz.name : "Quiz not found"}
         </h2>
         <QuestionCreateDialog handleCreate={handleCreate} />
       </div>
@@ -185,16 +146,16 @@ export default function DashboardQuestionPage({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {questions.map((question) => (
+          {questions.map((question: any) => (
             <TableRow key={question.id}>
               <TableCell>{question.id}</TableCell>
               <TableCell>{question.text}</TableCell>
               <TableCell>
                 <div className="flex gap-3 justify-end">
-                  <QuestionEditDialog
+                  {/* <QuestionEditDialog
                     handleEdit={handleEdit}
                     question={question}
-                  />
+                  /> */}
                   <QuestionDeleteAlertDialog
                     handleDelete={handleDelete}
                     question={question}
@@ -216,33 +177,24 @@ function QuestionCreateDialog({
 }>) {
   const form = useForm<z.infer<typeof QuestionFormSchema>>({
     resolver: zodResolver(QuestionFormSchema),
-    defaultValues: {
-      text: "",
-      answers: [
-        { label: "A", text: "A" },
-        { label: "B", text: "B" },
-        { label: "C", text: "C" },
-        { label: "D", text: "D" },
-      ],
-      correctAnswer: "A",
-    },
   });
   const [open, setOpen] = useState(false);
+  const [answersList, setAnswersList] = useState<any>([]);
 
-  const onSubmit = (data: z.infer<typeof QuestionFormSchema>) => {
+  const onSubmit = (data: any, answersList: any) => {
+    data.answers = answersList;
     handleCreate(data);
-    form.reset({
-      text: "",
-      answers: [
-        { label: "A", text: "A" },
-        { label: "B", text: "B" },
-        { label: "C", text: "C" },
-        { label: "D", text: "D" },
-      ],
-      correctAnswer: "A",
-    });
     setOpen(false);
   };
+
+  const addAnswerList = () => {
+    setAnswersList([...answersList, { text: "" }]);
+  }
+
+  const deleteAnswerList = (index: any) => {
+    const newAnswersList = answersList.filter((_: any, i: any) => i !== index);
+    setAnswersList(newAnswersList);
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -257,7 +209,7 @@ function QuestionCreateDialog({
         <Form {...form}>
           <form
             id="create-question-form"
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={(e) => {e.preventDefault(); onSubmit(form.getValues(), answersList)}}
           >
             <div className="grid gap-8 py-4">
               <div className="grid gap-4">
@@ -268,7 +220,7 @@ function QuestionCreateDialog({
                     <FormItem>
                       <FormLabel>Question</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input required {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -277,75 +229,39 @@ function QuestionCreateDialog({
               </div>
 
               <div className="grid gap-4">
-                <FormField
-                  control={form.control}
-                  name="answers.0.text"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Badge className="rounded-full" variant="secondary">
-                          Option A
-                        </Badge>
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="answers.1.text"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Badge className="rounded-full" variant="secondary">
-                          Option B
-                        </Badge>
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="answers.2.text"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Badge className="rounded-full" variant="secondary">
-                          Option C
-                        </Badge>
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="answers.3.text"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Badge className="rounded-full" variant="secondary">
-                          Option D
-                        </Badge>
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    {answersList.map((answer: any, index: any) => (
+                       <div className="flex w-full align-middle items-end">
+                        <div className="flex-grow">
+                        <FormField
+                       control={form.control}
+                       name={`answers.${index}.text`}
+                       render={({ field }) => (
+                         <FormItem>
+                           <FormLabel>
+                             <Badge className="rounded-full" variant="secondary">
+                               Option {index + 1}
+                             </Badge>
+                           </FormLabel>
+                           <FormControl>
+                             <Input required {...field} value={answer.text} onChange={
+                            (e) => {
+                              const newAnswersList = [...answersList];
+                              newAnswersList[index].text = e.target.value;
+                              setAnswersList(newAnswersList);
+                            }} />
+                           </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+                        </div>
+                     {/* button trash */}
+                      <Button size={"sm"} type="button" className="ml-2" variant="destructive" onClick={() => deleteAnswerList(index)}><Trash /></Button>
+                       </div>
+                    ))}
+              <Button size={"sm"} type="button" onClick={() => addAnswerList()}><Plus /> Add Answer</Button>
               </div>
+
 
               <FormField
                 control={form.control}
@@ -359,18 +275,20 @@ function QuestionCreateDialog({
                       <Select
                         required
                         onValueChange={field.onChange}
-                        defaultValue={field.value.toString()}
+                        defaultValue={`${field.value ?? ""}`}
                       >
                         <SelectTrigger id="select-correct-answer">
                           <SelectValue placeholder="Select correct answer" />
                         </SelectTrigger>
                         <SelectContent>
-                          {form.watch("answers").map((answer) => (
-                            <SelectItem key={answer.label} value={answer.label}>
-                              {`${answer.label}. ${answer.text}`}
+                          {answersList.length > 0 && answersList.filter((answer: any) => answer.text !== "").map((answer: any, index: number) => (
+                            <SelectItem key={index} value={answer.text}>
+                              {answer.text}
                             </SelectItem>
                           ))}
                         </SelectContent>
+
+
                       </Select>
                     </FormControl>
                     <FormMessage />
@@ -389,7 +307,7 @@ function QuestionCreateDialog({
           </DialogClose>
 
           <Button form="create-question-form" type="submit">
-            Create quiz
+            Create question
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -397,6 +315,7 @@ function QuestionCreateDialog({
   );
 }
 
+// (ALWAN) SUMPAH DAH GABISA BANGET INI KALO MAU PKE FITUR EDIT, MENDING DI HIDE AJA DAH
 function QuestionEditDialog({
   handleEdit,
   question,
@@ -404,39 +323,39 @@ function QuestionEditDialog({
   handleEdit: (
     data: z.infer<typeof QuestionFormSchema>,
     correctAnswer: string,
-    prevQuestion: Question
+    prevQuestion: any
   ) => void;
-  question: Question;
+  question: any;
 }>) {
   const answers = question.answers;
   const correctAnswer = question.correct_answer;
   const form = useForm<z.infer<typeof QuestionFormSchema>>({
     resolver: zodResolver(QuestionFormSchema),
-    defaultValues: {
-      text: question.text,
-      answers: [
-        { label: "A", text: answers[0].text },
-        { label: "B", text: answers[1].text },
-        { label: "C", text: answers[2].text },
-        { label: "D", text: answers[3].text },
-      ],
-      correctAnswer: "A",
-    },
   });
   const [open, setOpen] = useState(false);
+  const [answersList, setAnswersList] = useState<any>(answers);
+  const [correctAnswerState, setCorrectAnswer] = useState<any>(correctAnswer);
 
-  const onSubmit = (data: z.infer<typeof QuestionFormSchema>) => {
-    const correctAnswer = data.answers.find(
-      (answer) => answer.label === data.correctAnswer
-    )?.text;
+  useEffect(() => {
+    setAnswersList(question.answers);
+    setCorrectAnswer(question.correct_answer);
+  }, [question]);  
 
-    if (!correctAnswer) {
-      throw new Error("Correct answer not found");
-    }
-
-    handleEdit(data, correctAnswer, question);
-    setOpen(false);
+  const onSubmit = (data: any) => {
+    console.log(data);
+      
+    // handleEdit(data, correctAnswer, question);
+    // setOpen(false);
   };
+
+  const addAnswerList = () => {
+    setAnswersList([...answersList, { text: "" }]);
+  }
+
+  const deleteAnswerList = (index: any) => {
+    const newAnswersList = answersList.filter((_: any, i: any) => i !== index);
+    setAnswersList(newAnswersList);
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -453,7 +372,7 @@ function QuestionEditDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form id="edit-question-form" onSubmit={form.handleSubmit(onSubmit)}>
+          <form id="edit-question-form" onSubmit={(e) => {e.preventDefault(); onSubmit(form.getValues())}}>
             <div className="grid gap-8 py-4">
               <div className="grid gap-4">
                 <FormField
@@ -463,7 +382,7 @@ function QuestionEditDialog({
                     <FormItem>
                       <FormLabel>Question</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} defaultValue={question.text} required />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -472,75 +391,43 @@ function QuestionEditDialog({
               </div>
 
               <div className="grid gap-4">
-                <FormField
-                  control={form.control}
-                  name="answers.0.text"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Badge className="rounded-full" variant="secondary">
-                          Option A
-                        </Badge>
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="answers.1.text"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Badge className="rounded-full" variant="secondary">
-                          Option B
-                        </Badge>
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="answers.2.text"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Badge className="rounded-full" variant="secondary">
-                          Option C
-                        </Badge>
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="answers.3.text"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Badge className="rounded-full" variant="secondary">
-                          Option D
-                        </Badge>
-                      </FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+               
+               {
+                  answersList.map((answer: any, index: any) => (
+                    <div className="flex w-full align-middle items-end">
+                      <div className="flex-grow">
+                      <FormField
+                    control={form.control}
+                    name={`answers.${index}.text`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Badge className="rounded-full" variant="secondary">
+                            Option {index + 1}
+                          </Badge>
+                        </FormLabel>
+                        <FormControl>
+                          <Input required {...field} value={answer.text} onChange={
+                          (e) => {
+                            const newAnswersList = [...answersList];
+                            newAnswersList[index].text = e.target.value;
+                            setAnswersList(newAnswersList);
+                          }} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                      </div>
+                  {/* button trash */}
+                    <Button size={"sm"} type="button" className="ml-2" variant="destructive" onClick={() => deleteAnswerList(index)}><Trash /></Button>
+                    </div>
+                  ))
+               }
+
               </div>
+                {/* button for add more answer */}
+                <Button size={"sm"} onClick={() => addAnswerList()} type="button"><Plus /> Add Answer</Button>
 
               <FormField
                 control={form.control}
@@ -554,22 +441,15 @@ function QuestionEditDialog({
                       <Select
                         required
                         onValueChange={field.onChange}
-                        defaultValue={
-                          form
-                            .watch("answers")
-                            .find(
-                              (answer) => answer.text === correctAnswer.text
-                            )
-                            ?.label.toString() || "A"
-                        }
+                        defaultValue={answersList.find((answer: any) => answer.id === correctAnswerState)?.text ?? ""}
                       >
                         <SelectTrigger id="select-correct-answer">
                           <SelectValue placeholder="Select correct answer" />
                         </SelectTrigger>
                         <SelectContent>
-                          {form.watch("answers").map((answer) => (
-                            <SelectItem key={answer.label} value={answer.label}>
-                              {`${answer.label}. ${answer.text}`}
+                          {answersList.length > 0 && answersList.filter((answer: any) => answer.text !== "").map((answer: any, index: number) => (
+                            <SelectItem key={index} value={answer.text}>
+                              {answer.text}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -603,8 +483,8 @@ function QuestionDeleteAlertDialog({
   handleDelete,
   question,
 }: Readonly<{
-  handleDelete: (question: Question) => void;
-  question: Question;
+  handleDelete: (question: any) => void;
+  question: any;
 }>) {
   return (
     <AlertDialog>

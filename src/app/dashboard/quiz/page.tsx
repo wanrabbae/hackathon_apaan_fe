@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash, Pencil, Settings } from "lucide-react";
+import { Trash, Pencil, Settings, Save, Copy } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { set, useForm } from "react-hook-form";
 import { z } from "zod";
 import {
   Form,
@@ -61,6 +61,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Quiz } from "@/types";
 import { quizData } from "@/lib/data";
+import { createQuiz, deleteQuiz, getQuiz, updateQuiz } from "@/api/quiz_api";
 
 const EditFormSchema = z.object({
   id: z.number(),
@@ -80,22 +81,49 @@ export default function DashboardQuizPage() {
   const [quizzes, setQuizzes] = useState(quizData);
   const router = useRouter();
 
-  const handleCreate = (newQuiz: Quiz) => {
-    setQuizzes((prevState) => [...prevState, newQuiz]);
+  const inAwait = async () => {
+    const quizData = await getQuiz();
+    setQuizzes(quizData.data);
   };
 
-  const handleSave = (selectedQuiz: Quiz) => {
-    setQuizzes((prevState) =>
-      prevState.map((quiz) =>
-        quiz.id === selectedQuiz.id ? { ...quiz, ...selectedQuiz } : quiz
-      )
-    );
+  useEffect(() => {
+    inAwait();
+  }, []);
+
+  const handleCreate = async (newQuiz: Quiz) => {
+    delete newQuiz["id"];
+    try {
+      const response = await createQuiz(newQuiz);
+      setQuizzes((prevState) => [response.data.quiz, ...prevState]);
+    } catch (error) {
+      alert("Ups something went wrong!")
+    }
   };
 
-  const handleDelete = (selectedQuiz: Quiz) => {
-    setQuizzes((prevState) =>
-      prevState.filter((q) => q.id !== selectedQuiz.id)
-    );
+  const handleSave = async (selectedQuiz: Quiz) => {
+    // (ALWAN) ENTAH KENAPA KLO console.log(selectedQuiz) JADI KOSONG (KOCAKK)
+    const quizID = `${selectedQuiz.id}`;
+    delete selectedQuiz["id"];
+
+    try {
+      const response = await updateQuiz(quizID, selectedQuiz);
+      setQuizzes((prevState) =>
+        prevState.map((q) => (q.id === selectedQuiz.id ? response.data?.quiz : q))
+      );
+    } catch (error) {
+      alert("Ups something went wrong!")
+    }
+  };
+
+  const handleDelete = async (selectedQuiz: Quiz) => {
+    try {
+      await deleteQuiz(`${selectedQuiz.id}`);
+      setQuizzes((prevState) =>
+        prevState.filter((q) => q.id !== selectedQuiz.id)
+      );
+    } catch (error) {
+      alert("Ups something went wrong!")
+    }
   };
 
   return (
@@ -115,6 +143,7 @@ export default function DashboardQuizPage() {
           <TableRow>
             <TableHead className="w-32">Status</TableHead>
             <TableHead>Name</TableHead>
+            <TableHead>Quiz Code</TableHead>
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
         </TableHeader>
@@ -123,6 +152,7 @@ export default function DashboardQuizPage() {
             <TableRow key={quiz.id}>
               <TableCell>{quiz.status}</TableCell>
               <TableCell>{quiz.name}</TableCell>
+              <TableCell>{ quiz.id} <Button size={"sm"} onClick={() => navigator.clipboard.writeText(`${quiz.id}`)}><Copy size={14} strokeWidth={2.25} /></Button></TableCell>
               <TableCell>
                 <div className="flex gap-3 justify-end">
                   <TooltipCustom content="Manage Questions">
