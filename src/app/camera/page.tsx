@@ -13,7 +13,7 @@ export default function CameraPage() {
 }
 
 function Camera() {
-  const { videoRef, cameraStream } = useCamera();
+  const { videoRef } = useCamera();
 
   return (
     <div>
