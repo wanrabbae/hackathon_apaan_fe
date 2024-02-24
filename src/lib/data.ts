@@ -13,7 +13,7 @@ export const userData: User[] = [
 export const questionData: Question[] = [
   {
     id: 1,
-    quiz_id: 1,
+    quiz_id: "1",
     text: "Apa itu Pancasila?",
     answers: [
       {
@@ -45,7 +45,7 @@ export const questionData: Question[] = [
   },
   {
     id: 2,
-    quiz_id: 1,
+    quiz_id: "1",
     text: "Kucing warna apa?",
     answers: [
       {
