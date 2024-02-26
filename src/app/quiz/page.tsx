@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
     Form,
@@ -26,6 +26,25 @@ const QuizCodeSchema = z.object({
 export default function AttemptQuizPage() {
     const router = useRouter();
     const [quizCode, setQuizCode] = useState('');
+
+    const inAwait = async () => {
+        const token = localStorage.getItem("token");
+        const role = localStorage.getItem("role");
+    
+        if (token) {
+          if(role == "1") {
+            router.push("/dashboard");
+          }else {
+            return;
+          }
+        }else {
+          router.push("/login");
+        }
+      }
+    
+      useEffect(() => {
+        inAwait();
+      }, []);
 
     const form = useForm<z.infer<typeof QuizCodeSchema>>({
         resolver: zodResolver(QuizCodeSchema),
@@ -78,6 +97,14 @@ export default function AttemptQuizPage() {
                             <Button form="create-quiz-form" type="submit">
                                 Attempt quiz
                             </Button>
+
+                            {/* logout button */}
+                                <Button onClick={() => {
+                                localStorage.clear();
+                                router.push("/login");
+                            }} form="logout-form" className="bg-red-500 text-white" type="submit">
+                                    Logout
+                                </Button>
                         </form>
                     </Form>
                 </div>

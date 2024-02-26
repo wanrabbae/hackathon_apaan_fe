@@ -125,6 +125,7 @@ export default function DashboardQuestionPage({
     }
   };
 
+  var i = 1;
   return (
     <main className="mt-12 flex min-h-screen flex-col px-24 py-6 dark:bg-zinc-950 bg-zinc-50">
       <div className="flex justify-between border-b pb-2 mt-3">
@@ -146,9 +147,10 @@ export default function DashboardQuestionPage({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {questions.map((question: any) => (
-            <TableRow key={question.id}>
-              <TableCell>{question.id}</TableCell>
+          {
+            questions.map((question: any) => {
+            return <TableRow key={question.id}>
+              <TableCell>{i++}</TableCell>
               <TableCell>{question.text}</TableCell>
               <TableCell>
                 <div className="flex gap-3 justify-end">
@@ -163,7 +165,7 @@ export default function DashboardQuestionPage({
                 </div>
               </TableCell>
             </TableRow>
-          ))}
+})}
         </TableBody>
       </Table>
     </main>

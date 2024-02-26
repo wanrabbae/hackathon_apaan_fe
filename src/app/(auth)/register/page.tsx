@@ -16,6 +16,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { register } from "@/api/auth_api";
 
 const LoginSchema = z.object({
     fullname: z.string(),
@@ -37,11 +38,18 @@ export default function AttemptQuizPage() {
     });
 
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const { email } = form.getValues();
+        const { email, fullname, password } = form.getValues();
 
-        // router.push(`/quiz/${QuizCode}`);
+        try {
+            const response = await register(email, password, fullname);
+      
+            router.push("/login");
+          }catch (error) {
+            console.error(error);
+            alert("Ups something went wrong!")
+          }
     };
 
     return (
@@ -64,7 +72,7 @@ export default function AttemptQuizPage() {
                                         <FormItem>
                                             <FormLabel>Fullname</FormLabel>
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} required />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -79,7 +87,7 @@ export default function AttemptQuizPage() {
                                         <FormItem>
                                             <FormLabel>Email</FormLabel>
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} required />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -94,7 +102,7 @@ export default function AttemptQuizPage() {
                                         <FormItem>
                                             <FormLabel>Password</FormLabel>
                                             <FormControl>
-                                                <Input {...field} />
+                                                <Input {...field} required type="password" />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -102,8 +110,16 @@ export default function AttemptQuizPage() {
                                 />
                             </div>
                             <Button form="login-form" type="submit">
-                                Login
+                                Register
                             </Button>
+
+                            <a
+                                href="#"
+                                className="text-center text-blue-500 hover:underline"
+                                onClick={() => router.push("/login")}
+                            >
+                                Already have an account? Login
+                            </a>
                         </form>
                     </Form>
                 </div>

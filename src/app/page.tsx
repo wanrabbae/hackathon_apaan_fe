@@ -12,12 +12,14 @@ export default function Home() {
         <h1 className="text-5xl font-bold text-center dark:text-zinc-50">
           Welcome to Quiz App
         </h1>
+
+        <img src="https://i.ibb.co/7XX9314/undraw-Questions-re-1fy7-removebg-preview.png" alt="Illustration" width={500} />
       </div>
       <div className="flex gap-3">
-        <Button onClick={() => router.push("/quiz")}>
+        <Button onClick={() => localStorage.getItem("token") ? router.push("/quiz") : router.push("/login")}>
           Attempt Quiz
         </Button>
-        <Button variant={"secondary"} onClick={() => router.push("/dashboard")}>
+        <Button variant={"secondary"} onClick={() => localStorage.getItem("token") ? router.push("/dashboard") : router.push("/login")}>
           Go to Dashboard
         </Button>
       </div>
